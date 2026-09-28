@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "k3s Learning App Runtime",
+    "locale": "en",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "client", "type": "external", "label": "Browser / curl", "sublabel": "your IP", "pos": [40, 240], "size": [140, 64] },
+    { "id": "sg", "type": "security", "label": "EC2 Security Group", "sublabel": "inbound TCP 30080", "pos": [250, 240], "size": [150, 64] },
+    { "id": "nodeport", "type": "cloud", "label": "Service", "sublabel": "NodePort 30080 → 80", "pos": [490, 240], "size": [150, 64] },
+    { "id": "pods", "type": "backend", "label": "FastAPI Pods ×3", "sublabel": "uvicorn :8080", "pos": [730, 240], "size": [150, 64], "tag": "Deployment" },
+    { "id": "configmap", "type": "database", "label": "ConfigMap", "sublabel": "app-config", "pos": [970, 240], "size": [140, 64] },
+    { "id": "operator", "type": "external", "label": "Operator", "sublabel": "kubectl on host", "pos": [40, 100], "size": [140, 64] },
+    { "id": "apiserver", "type": "cloud", "label": "k3s API Server", "sublabel": "control plane", "pos": [490, 100], "size": [150, 64] },
+    { "id": "kubelet", "type": "backend", "label": "kubelet", "sublabel": "probes + lifecycle", "pos": [730, 100], "size": [150, 64] },
+    { "id": "docker", "type": "backend", "label": "Docker build", "sublabel": "build.sh", "pos": [490, 380], "size": [150, 64] },
+    { "id": "containerd", "type": "database", "label": "k3s containerd", "sublabel": "local image store", "pos": [730, 380], "size": [150, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "AWS EC2 instance (single node)", "wraps": ["nodeport", "pods", "configmap", "apiserver", "kubelet", "docker", "containerd"] },
+    { "kind": "security-group", "label": "k3s cluster · default namespace", "wraps": ["nodeport", "pods", "configmap", "apiserver", "kubelet"] }
+  ],
+  "connections": [
+    { "id": "client-to-sg", "from": "client", "to": "sg", "label": "HTTP :30080", "variant": "emphasis" },
+    { "id": "sg-to-svc", "from": "sg", "to": "nodeport", "variant": "emphasis" },
+    { "id": "svc-to-pods", "from": "nodeport", "to": "pods", "label": "80→8080", "variant": "emphasis" },
+    { "id": "config-env", "from": "configmap", "to": "pods", "label": "envFrom" },
+    { "id": "kubectl-apply", "from": "operator", "to": "apiserver", "label": "kubectl apply", "variant": "security" },
+    { "id": "schedule", "from": "apiserver", "to": "kubelet", "label": "pod spec" },
+    { "id": "probes", "from": "kubelet", "to": "pods", "label": "GET /health", "variant": "dashed", "labelAt": [805, 202] },
+    { "id": "import", "from": "docker", "to": "containerd", "label": "ctr import" },
+    { "id": "image", "from": "containerd", "to": "pods", "label": "image v1", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Primary path", "items": ["Client → SG → NodePort 30080 → Service :80 → pod :8080, balanced across 3 replicas"] },
+    { "dot": "emerald", "title": "Workload", "items": ["3 replicas, 50m/64Mi req, 200m/128Mi limit", "Readiness + liveness on /health; env from ConfigMap"] },
+    { "dot": "amber", "title": "Image supply", "items": ["No registry: docker save → k3s ctr import", "imagePullPolicy: Never (k8s-learning-app:v1)"] },
+    { "dot": "rose", "title": "Trust boundaries", "items": ["Only the EC2 SG gates internet traffic", "No ingress, TLS, or auth in front of pods"] }
+  ]
+}

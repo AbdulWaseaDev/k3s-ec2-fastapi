@@ -1,0 +1,46 @@
+# BUG: the liveness probe targets a port the app is not listening on.
+# Practice diagnosing this with kubectl before reading TROUBLESHOOTING.md.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-broken-2
+  labels:
+    app: app-broken-2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-broken-2
+  template:
+    metadata:
+      labels:
+        app: app-broken-2
+    spec:
+      containers:
+        - name: k8s-learning-app
+          image: k8s-learning-app:v1
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9999
+            initialDelaySeconds: 5
+            periodSeconds: 10

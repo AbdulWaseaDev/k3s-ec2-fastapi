@@ -1,0 +1,50 @@
+# BUG: this Deployment references a ConfigMap key that does not exist in
+# app-config (see k8s/configmap.yaml). Practice diagnosing this with kubectl
+# before reading TROUBLESHOOTING.md.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-broken-3
+  labels:
+    app: app-broken-3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-broken-3
+  template:
+    metadata:
+      labels:
+        app: app-broken-3
+    spec:
+      containers:
+        - name: k8s-learning-app
+          image: k8s-learning-app:v1
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_MESSAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: APP_MSG_TYPO
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

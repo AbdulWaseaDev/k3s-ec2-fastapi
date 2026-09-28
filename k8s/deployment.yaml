@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-learning-app
+  labels:
+    app: k8s-learning-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: k8s-learning-app
+  template:
+    metadata:
+      labels:
+        app: k8s-learning-app
+    spec:
+      containers:
+        - name: k8s-learning-app
+          image: k8s-learning-app:v1
+          # Image is built and imported locally into k3s's containerd (see build.sh),
+          # so we never want the kubelet trying to pull it from a registry.
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

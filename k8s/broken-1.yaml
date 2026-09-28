@@ -1,0 +1,47 @@
+# BUG: the image tag has a typo and does not exist in k3s's local containerd
+# image store. Practice diagnosing this with kubectl before reading
+# TROUBLESHOOTING.md.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-broken-1
+  labels:
+    app: app-broken-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-broken-1
+  template:
+    metadata:
+      labels:
+        app: app-broken-1
+    spec:
+      containers:
+        - name: k8s-learning-app
+          image: k8s-learning-app:v1-typo
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

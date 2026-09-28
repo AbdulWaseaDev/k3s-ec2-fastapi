@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  APP_MESSAGE: "Hello from k3s!"
+  APP_ENV: "learning"
